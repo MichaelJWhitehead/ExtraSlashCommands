@@ -72,25 +72,7 @@ SlashCmdList["POOCOMM"] = function(msg)
     print("Pull:")
     print("/pull X")
 end
---[[
--- CD Tracking test
-frame:SetScript("OnEvent", function(self, event, ...)
-    if event == "PLAYER_LOGIN" then
-        JoinChannelByName(CHANNEL_NAME)
-        print("|cff00ff00[" .. addonName .. "]|r Listening to channel: " .. CHANNEL_NAME)
-        self:RegisterEvent("CHAT_MSG_CHANNEL")
- 
-    elseif event == "CHAT_MSG_CHANNEL" then
-        local message, author, _, _, _, _, _, _, channelName = ...
-        local normalizedChannel = channelName:match("^%d*%.?%s*(.+)") or channelName
--- Debugging 
-        if normalizedChannel:lower() == CHANNEL_NAME:lower() then
-            local shortAuthor = author:match("^([^%-]+)") or author
-            print(shortAuthor .. " : " .. message)
-        end
-    end
-end)
-]]
+
 
 -- CD Tracking test
 -- WoW class colours (same as RAID_CLASS_COLORS)
@@ -250,9 +232,9 @@ local function StartCountdown(seconds, senderName)
     bar:Show()
 end
  
---------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Event handling
---------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 local frame = CreateFrame("Frame", ADDON_NAME .. "Frame")
 frame:RegisterEvent("PLAYER_LOGIN")
  
