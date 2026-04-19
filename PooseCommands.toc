@@ -1,0 +1,7 @@
+## Interface: 120000
+## Title: PooseCommands
+## Notes: It adds a few slash commands for convenience, you can do /poocomm to see the possible options
+## Author: Poose
+## Version: 1.1
+## SavedVariables: PooseCommandDB
+pc.lua

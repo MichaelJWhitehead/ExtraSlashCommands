@@ -1,7 +1,0 @@
-## Interface: 120000
-## Title: PooseCommands
-## Notes: It adds a few slash commands for convenience
-## Author: Poose
-## Version: 1.0
-
-pc.lua
