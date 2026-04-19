@@ -1,6 +1,6 @@
 -- PooseCommand.lua
-local ADDON_NAME = "PooseCommand"
-local CHANNEL_NAME = "Poosecommand"
+local ADDON_NAME = "PooseComm"
+local CHANNEL_NAME = "Pookick"
 
 PooseCommandDB = PooseCommandDB or {}
 
