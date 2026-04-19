@@ -1,11 +1,9 @@
--- MyFirstAddon.lua
--- A basic WoW addon template for patch 12.0
-
-local addonName, addon = ...
-local CHANNEL_NAME = "Pookick"
-local ADDON_NAME = "Pookick"
+-- PooseCommand.lua
+local ADDON_NAME = "PooseCommand"
+local CHANNEL_NAME = "Poosecommand"
 
 PooseCommandDB = PooseCommandDB or {}
+
 -- Create main frame
 local frame = CreateFrame("Frame")
 
@@ -73,9 +71,8 @@ SlashCmdList["POOCOMM"] = function(msg)
     print("/pull X")
 end
 
-
--- CD Tracking test
--- WoW class colours (same as RAID_CLASS_COLORS)
+--------------------------------------------------------------------------------
+-- Class colours
 --------------------------------------------------------------------------------
 local CLASS_COLORS = {
     WARRIOR     = { r = 0.78, g = 0.61, b = 0.43 },
@@ -92,144 +89,218 @@ local CLASS_COLORS = {
     DEMONHUNTER = { r = 0.64, g = 0.19, b = 0.79 },
     EVOKER      = { r = 0.20, g = 0.58, b = 0.50 },
 }
- 
 local DEFAULT_COLOR = { r = 1, g = 1, b = 1 }
- 
--- Get class colour for a player name by scanning group/raid units
---------------------------------------------------------------------------------
-local function GetClassColorForPlayer(name)
-    local prefix = IsInRaid() and "raid" or "party"
-    local count  = IsInRaid() and GetNumGroupMembers() or GetNumGroupMembers()
- 
-    -- Also check "player" itself
-    local units = { "player" }
-    for i = 1, count do
-        table.insert(units, prefix .. i)
-    end
 
-    for _, unit in ipairs(units) do
-        local unitName = GetUnitName(unit, false)
-        if unitName and unitName:lower() == name:lower() then
-            local _, classToken = UnitClass(unit)
-            if classToken then
-                return CLASS_COLORS[classToken] or DEFAULT_COLOR, classToken
-            end
+--------------------------------------------------------------------------------
+-- Hardcoded entries  { name (lowercase key), class token, duration (seconds) }
+-- Add your defaults here — these are always present
+--------------------------------------------------------------------------------
+local HARDCODED = {
+    { name = "Pooseunpoose",    class = "DEATHKNIGHT",      duration = 15 },
+    { name = "Arkoa",    class = "DEMONHUNTER",      duration = 15 },
+    { name = "Danardz",    class = "SHAMAN",      duration = 12 },
+    { name = "Phlin",    class = "WARLOCK",      duration = 24 },
+    { name = "Stuperstrong",    class = "WARRIOR",      duration = 15 },
+    { name = "Dawnpew",    class = "HUNTER",      duration = 24 },
+    { name = "Shockbot",    class = "SHAMAN",      duration = 45 },
+}
+-- Build the live dictionary from hardcoded + saved entries
+-- Keys are lowercase names for case-insensitive matching
+local function BuildDictionary()
+    local dict = {}
+    for _, entry in ipairs(HARDCODED) do
+        dict[entry.name:lower()] = { class = entry.class:upper(), duration = entry.duration }
+    end
+    -- Layer saved entries on top (they can override hardcoded)
+    if PooseCommandDB.entries then
+        for name, data in pairs(PooseCommandDB.entries) do
+            dict[name:lower()] = { class = data.class:upper(), duration = data.duration }
         end
     end
- 
-    return DEFAULT_COLOR, nil
+    return dict
 end
  
--- Helper: wrap a name in its class colour for chat output
 --------------------------------------------------------------------------------
-local function ColoredName(name)
-    local color = GetClassColorForPlayer(name)
-    return string.format("|cff%02x%02x%02x%s|r",
-        color.r * 255, color.g * 255, color.b * 255, name)
+-- Bar pool — stacked vertically, 300×26 each with 4px gap
+--------------------------------------------------------------------------------
+local BAR_W, BAR_H, BAR_GAP = 150, 26, 2
+local activeBars = {}   -- keyed by lowercase name
+ 
+local function GetClassColor(classToken)
+    return CLASS_COLORS[classToken] or DEFAULT_COLOR
 end
  
--- Bar setup
---------------------------------------------------------------------------------
-local bar = CreateFrame("Frame", ADDON_NAME .. "Bar", UIParent)
-bar:SetSize(300, 30)
-bar:SetFrameStrata("MEDIUM")
- 
-if PooseCommandDB.x and PooseCommandDB.y then
-    bar:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", PooseCommandDB.x, PooseCommandDB.y)
-else
-    bar:SetPoint("TOP", UIParent, "TOP", 0, -200)
+local function ColorHex(color)
+    return string.format("%02x%02x%02x", color.r * 255, color.g * 255, color.b * 255)
 end
  
-local bg = bar:CreateTexture(nil, "BACKGROUND")
-bg:SetAllPoints()
-bg:SetColorTexture(0, 0, 0, 0.7)
-
-local fill = bar:CreateTexture(nil, "ARTWORK")
-fill:SetPoint("TOPLEFT",    bar, "TOPLEFT",    1, -1)
-fill:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 1,  1)
-fill:SetWidth(298)
-fill:SetColorTexture(0.2, 0.8, 0.2, 1)
+local function CreateBar(name, classToken, duration)
+    local color = GetClassColor(classToken)
+    local index = 0
+    for _ in pairs(activeBars) do index = index + 1 end  -- slot = current count before insert
  
-local label = bar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-label:SetAllPoints()
-label:SetJustifyH("CENTER")
-label:SetText("")
+    local f = CreateFrame("Frame", nil, UIParent)
+    f:SetSize(BAR_W, BAR_H)
+    f:SetFrameStrata("MEDIUM")
  
--- Sender name tag on the left of the bar
-local senderLabel = bar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-senderLabel:SetPoint("LEFT", bar, "LEFT", 6, 0)
-senderLabel:SetJustifyH("LEFT")
-senderLabel:SetText("")
+    -- Position: offset from TOP of screen, stacked downward by slot
+    local baseX = PooseCommandDB.x or 0
+    local baseY = PooseCommandDB.y or -200
+    f:SetPoint("TOP", UIParent, "TOP",
+        baseX,
+        baseY - index * (BAR_H + BAR_GAP))
  
-bar:Hide()
+    -- Background
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0, 0, 0, 0.7)
  
-bar:SetMovable(true)
-bar:EnableMouse(true)
-bar:RegisterForDrag("LeftButton")
- 
-bar:SetScript("OnDragStart", function(self) self:StartMoving() end)
-bar:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-    PooseCommandDB.x = self:GetLeft()
-    PooseCommandDB.y = self:GetTop() - UIParent:GetHeight()
-end)
- 
---------------------------------------------------------------------------------
--- Countdown state
---------------------------------------------------------------------------------
-local countdown = { active = false, total = 0, remaining = 0, elapsed = 0 }
- 
--- Track the colour of whoever started the current countdown
-local barColor = { r = 0.2, g = 0.8, b = 0.2 }
- 
-bar:SetScript("OnUpdate", function(self, delta)
-    if not countdown.active then return end
- 
-    countdown.elapsed   = countdown.elapsed + delta
-    countdown.remaining = countdown.total - countdown.elapsed
- 
-    if countdown.remaining <= 0 then
-        countdown.remaining = 0
-        countdown.active    = false
-        fill:SetWidth(bar:GetWidth() - 2)
-        fill:SetColorTexture(0.8, 0.1, 0.1, 1)
-        label:SetText("Ready")
-        return
-    end
- 
-    -- elapsed ratio: 0 at start → 1 at end (bar fills left to right)
-    local ratio = countdown.elapsed / countdown.total
-    local maxW  = bar:GetWidth() - 2
-    fill:SetWidth(math.max(1, maxW * ratio))
- 
-    -- Fade from class colour → dark red as time runs out
-    fill:SetColorTexture(
-        barColor.r * (1 - ratio) + 0.8 * ratio,
-        barColor.g * (1 - ratio) + 0.1 * ratio,
-        barColor.b * (1 - ratio) + 0.1 * ratio,
-        1
-    )
- 
-    label:SetText(string.format("%.1f", countdown.remaining))
-end)
- 
---------------------------------------------------------------------------------
--- Start countdown, coloured by the sender's class
---------------------------------------------------------------------------------
-local function StartCountdown(seconds, senderName)
-    local color, classToken = GetClassColorForPlayer(senderName)
-    barColor = color
- 
-    countdown.total     = seconds
-    countdown.remaining = seconds
-    countdown.elapsed   = 0
-    countdown.active    = true
- 
+    -- Fill
+    local fill = f:CreateTexture(nil, "ARTWORK")
+    fill:SetPoint("TOPLEFT",    f, "TOPLEFT",    1, -1)
+    fill:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 1,  1)
     fill:SetWidth(1)
     fill:SetColorTexture(color.r, color.g, color.b, 1)
-    label:SetText(tostring(seconds))
-    senderLabel:SetText(ColoredName(senderName))
-    bar:Show()
+ 
+    -- Name label (left)
+    local nameLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    nameLabel:SetPoint("LEFT", f, "LEFT", 6, 0)
+    nameLabel:SetJustifyH("LEFT")
+    nameLabel:SetText("|cffffffff" .. name .. "|r")
+ 
+    -- Timer label (right)
+    local timeLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    timeLabel:SetPoint("RIGHT", f, "RIGHT", -6, 0)
+    timeLabel:SetJustifyH("RIGHT")
+    timeLabel:SetText(tostring(duration))
+ 
+    -- State
+    f.color    = color
+    f.total    = duration
+    f.elapsed  = 0
+    f.active   = true
+    f.barName  = name
+ 
+    f:SetScript("OnUpdate", function(self, delta)
+        if not self.active then return end
+ 
+        self.elapsed = self.elapsed + delta
+        local remaining = self.total - self.elapsed
+ 
+        if remaining <= 0 then
+            self.active = false
+            fill:SetWidth(BAR_W - 2)
+            fill:SetColorTexture(self.color.r, self.color.g, self.color.b, 1)
+            timeLabel:SetText("|cffffffffReady|r")
+ 
+            -- Remove after 3 seconds
+            C_Timer.After(60, function()
+                activeBars[self.barName:lower()] = nil
+                self:Hide()
+                self:SetScript("OnUpdate", nil)
+                -- Restack remaining bars
+                local slot = 0
+                for _, b in pairs(activeBars) do
+                    local bx = PooseCommandDB.x or 0
+                    local by = PooseCommandDB.y or -200
+                    b:SetPoint("TOP", UIParent, "TOP",
+                        bx, by - slot * (BAR_H + BAR_GAP))
+                    slot = slot + 1
+                end
+            end)
+            return
+        end
+ 
+        local ratio = self.elapsed / self.total
+        local maxW  = BAR_W - 2
+        fill:SetWidth(math.max(1, maxW * ratio))
+ 
+        fill:SetColorTexture(self.color.r, self.color.g, self.color.b, 1)
+        timeLabel:SetText(string.format("%.1f", remaining))
+    end)
+ 
+    -- Dragging moves the whole stack via saved anchor
+    f:SetMovable(true)
+    f:EnableMouse(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    f:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        -- Save offset from screen TOP-CENTER
+        local screenW = UIParent:GetWidth()
+        local screenH = UIParent:GetHeight()
+        PooseCommandDB.x = self:GetLeft() + self:GetWidth()/2 - screenW/2
+        PooseCommandDB.y = self:GetTop() - screenH
+        -- Restack all bars relative to new anchor
+        local slot = 0
+        for _, b in pairs(activeBars) do
+            b:SetPoint("TOP", UIParent, "TOP",
+                PooseCommandDB.x,
+                PooseCommandDB.y - slot * (BAR_H + BAR_GAP))
+            slot = slot + 1
+        end
+    end)
+ 
+    f:Show()
+    activeBars[name:lower()] = f
+end
+ 
+--------------------------------------------------------------------------------
+-- Slash commands:  /pc add <name> <class> <duration>
+--                  /pc remove <name>
+--                  /pc list
+--------------------------------------------------------------------------------
+SLASH_POOSECOMMAND1 = "/pc"
+SlashCmdList["POOSECOMMAND"] = function(input)
+    local cmd, arg1, arg2, arg3 = input:match("^(%S+)%s*(%S*)%s*(%S*)%s*(%S*)")
+    cmd = cmd and cmd:lower() or ""
+ 
+    if cmd == "add" then
+        local name, class, dur = arg1, arg2, tonumber(arg3)
+        if not name or name == "" or not class or class == "" or not dur then
+            print("|cff00ff00[PC]|r Usage: /pc add <name> <class> <duration>")
+            print("|cff00ff00[PC]|r Example: /pc add Innervate DRUID 10")
+            return
+        end
+        class = class:upper()
+        if not CLASS_COLORS[class] then
+            print("|cff00ff00[PC]|r Unknown class: " .. class)
+            print("|cff00ff00[PC]|r Valid classes: WARRIOR PALADIN HUNTER ROGUE PRIEST DEATHKNIGHT SHAMAN MAGE WARLOCK MONK DRUID DEMONHUNTER EVOKER")
+            return
+        end
+        PooseCommandDB.entries = PooseCommandDB.entries or {}
+        PooseCommandDB.entries[name:lower()] = { class = class, duration = dur }
+        print(string.format("|cff00ff00[PC]|r Added: %s | %s | %ds", name, class, dur))
+ 
+    elseif cmd == "remove" then
+        local name = arg1
+        if not name or name == "" then
+            print("|cff00ff00[PC]|r Usage: /pc remove <name>")
+            return
+        end
+        PooseCommandDB.entries = PooseCommandDB.entries or {}
+        if PooseCommandDB.entries[name:lower()] then
+            PooseCommandDB.entries[name:lower()] = nil
+            print("|cff00ff00[PC]|r Removed: " .. name)
+        else
+            print("|cff00ff00[PC]|r Not found in saved entries: " .. name)
+        end
+ 
+    elseif cmd == "list" then
+        local dict = BuildDictionary()
+        print("|cff00ff00[PC]|r Current entries:")
+        for name, data in pairs(dict) do
+            local color = GetClassColor(data.class)
+            print(string.format("  |cff%s%s|r — %s — %ds",
+                ColorHex(color), name, data.class, data.duration))
+        end
+ 
+    else
+        print("|cff00ff00[PC]|r Commands:")
+        print("  /pc add <name> <class> <duration>")
+        print("  /pc remove <name>")
+        print("  /pc list")
+    end
 end
  
 --------------------------------------------------------------------------------
@@ -242,21 +313,33 @@ frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         JoinChannelByName(CHANNEL_NAME)
         print("|cff00ff00[" .. ADDON_NAME .. "]|r Listening to channel: " .. CHANNEL_NAME)
+        print("|cff00ff00[" .. ADDON_NAME .. "]|r Type /pc list to see entries, /pc help for commands.")
         self:RegisterEvent("CHAT_MSG_CHANNEL")
  
     elseif event == "CHAT_MSG_CHANNEL" then
-        local message, author, _, _, _, _, _, _, channelName = ...
-        local normalizedChannel = channelName:match("^%d*%.?%s*(.+)") or channelName
+        -- Args: text, playerName, languageName, channelName, playerName2, specialFlags, ...
+        -- channelName is arg 4, formatted as "1. Poosecommand"
+        local message, author, _, channelName = ...
+        local channelBaseName = channelName:match("^%d+%.%s*(.+)$") or channelName
  
-        if normalizedChannel:lower() == CHANNEL_NAME:lower() then
+        if channelBaseName:lower() == CHANNEL_NAME:lower() then
             local shortAuthor = author:match("^([^%-]+)") or author
-            print(ColoredName(shortAuthor) .. " : " .. message)
+            local key = message:lower():gsub("%s+", "")  -- strip spaces for matching
  
-            local seconds = tonumber(message)
-            if seconds and seconds > 0 then
-                StartCountdown(seconds, shortAuthor)
+            local dict = BuildDictionary()
+            local entry = dict[key]
+ 
+            if entry then
+                if activeBars[key] then
+                    -- Already running — restart
+                    local b = activeBars[key]
+                    b.elapsed = 0
+                    b.active  = true
+                    return
+                end
+                print(string.format("|cff00ff00[PC]|r %s called %s (%ds)", shortAuthor, message, entry.duration))
+                CreateBar(message, entry.class, entry.duration)
             end
         end
     end
 end)
- 
