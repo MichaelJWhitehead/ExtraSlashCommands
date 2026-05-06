@@ -53,6 +53,17 @@ SlashCmdList["PULL"] = function(seconds)
   C_PartyInfo.DoCountdown(seconds)
 end
 
+-- Slash command 5: /loot
+-- Mastermined by Ark, coded by Claude
+SLASH_LOOTREDIRECT1 = "/loot"
+SlashCmdList["LOOTREDIRECT"] = function(msg)
+    if SlashCmdList["KEYSTONELOOT"] then
+        SlashCmdList["KEYSTONELOOT"](msg or "")
+    else
+        print("|cffff0000/loot only works with the KeystoneLoot addon.|r")
+    end
+end
+
 SLASH_POOCOMM1 = "/poocomm"
 SlashCmdList["POOCOMM"] = function(msg)
     print("Commands:\n")
