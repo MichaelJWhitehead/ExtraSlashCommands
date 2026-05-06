@@ -60,7 +60,7 @@ SlashCmdList["LOOTREDIRECT"] = function(msg)
     if SlashCmdList["KEYSTONELOOT"] then
         SlashCmdList["KEYSTONELOOT"](msg or "")
     else
-        print("|cffff0000/keystoneloot not found. Make sure the required addon is enabled.|r")
+        print("|cffff0000/loot only works with the KeystoneLoot addon.|r")
     end
 end
 
