@@ -53,14 +53,15 @@ SlashCmdList["PULL"] = function(seconds)
   C_PartyInfo.DoCountdown(seconds)
 end
 
--- Slash command 5: /loot
+-- Slash command 5: /wishlist
 -- Mastermined by Ark, coded by Claude
-SLASH_LOOTREDIRECT1 = "/loot"
-SlashCmdList["LOOTREDIRECT"] = function(msg)
+SLASH_WISHLIST1 = "/wishlist"
+SLASH_WISHLIST2 = "/wl"
+SlashCmdList["WISHLIST"] = function(msg)
     if SlashCmdList["KEYSTONELOOT"] then
         SlashCmdList["KEYSTONELOOT"](msg or "")
     else
-        print("|cffff0000/loot only works with the KeystoneLoot addon.|r")
+        print("|cffff0000/wishlist only works with the KeystoneLoot addon.|r")
     end
 end
 
