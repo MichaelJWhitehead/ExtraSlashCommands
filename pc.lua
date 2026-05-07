@@ -65,6 +65,20 @@ SlashCmdList["WISHLIST"] = function(msg)
     end
 end
 
+-- Slash command 6: /vault, /gv -> Great Vault
+-- Mastermined by Ark, coded by Claude
+SLASH_VAULT1 = "/vault"
+SLASH_VAULT2 = "/gv"
+SlashCmdList["VAULT"] = function(msg)
+    C_AddOns.LoadAddOn("Blizzard_WeeklyRewards")
+    WeeklyRewardsFrame:Show()
+    -- Only insert if not already registered
+    for _, name in ipairs(UISpecialFrames) do
+        if name == "WeeklyRewardsFrame" then return end
+    end
+    table.insert(UISpecialFrames, "WeeklyRewardsFrame")
+end
+
 SLASH_POOCOMM1 = "/poocomm"
 SlashCmdList["POOCOMM"] = function(msg)
     print("Commands:\n")
