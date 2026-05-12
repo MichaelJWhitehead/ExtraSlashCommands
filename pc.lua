@@ -66,17 +66,33 @@ SlashCmdList["WISHLIST"] = function(msg)
 end
 
 -- Slash command 6: /vault, /gv -> Great Vault
--- Mastermined by Ark, coded by Claude
+-- Mastermined by Stuper, coded by Claude
 SLASH_VAULT1 = "/vault"
 SLASH_VAULT2 = "/gv"
 SlashCmdList["VAULT"] = function(msg)
     C_AddOns.LoadAddOn("Blizzard_WeeklyRewards")
     WeeklyRewardsFrame:Show()
+
+    -- The following code is needed to make sure the GV frame can be closed with the escape key and doesn't cause taint issues
     -- Only insert if not already registered
     for _, name in ipairs(UISpecialFrames) do
         if name == "WeeklyRewardsFrame" then return end
     end
     table.insert(UISpecialFrames, "WeeklyRewardsFrame")
+end
+
+-- Slash command: /score -> Mythic+ Score (Challenges Frame)
+-- Mastermined by Ark, coded by Claude
+SLASH_SCORE1 = "/score"
+SlashCmdList["SCORE"] = function(msg)
+    C_AddOns.LoadAddOn("Blizzard_ChallengesUI")
+    PVEFrame_ShowFrame("ChallengesFrame")
+
+    -- Register with UISpecialFrames so Escape closes it
+    for _, name in ipairs(UISpecialFrames) do
+        if name == "PVEFrame" then return end
+    end
+    table.insert(UISpecialFrames, "PVEFrame")
 end
 
 SLASH_POOCOMM1 = "/poocomm"
