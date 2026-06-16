@@ -102,11 +102,11 @@ SLASH_TEMP1="/temp"
   local number = temp:sub(1, -2)
   if string.lower(CorF) == "f" then
     result = (number-32)*(5/9)
-    print("TEMP converted to C: " .. result .. "c")
+    print("TEMP converted to C: " .. result .. "C")
   end
   if string.lower(CorF) == "c" then
     result = (number*1.8)+32
-    print("TEMP converted to F: " .. result .. "f")
+    print("TEMP converted to F: " .. result .. "F")
   end
 end
   
