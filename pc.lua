@@ -100,17 +100,14 @@ SLASH_TEMP1="/temp"
   local temp = msg
   CorF = string.sub(temp, -1)
   local number = temp:sub(1, -2)
-  print(CorF)
-  print(number)
   if string.lower(CorF) == "f" then
-    print("This was Farenheit")
     result = (number-32)*(5/9)
+    print("TEMP converted to C: " .. result .. "c")
   end
   if string.lower(CorF) == "c" then
-    print("This was Celcius")
     result = (number*1.8)+32
+    print("TEMP converted to F: " .. result .. "f")
   end
-  print("TEMP:" .. result .. "")
 end
   
 SLASH_POOCOMM1 = "/poocomm"
