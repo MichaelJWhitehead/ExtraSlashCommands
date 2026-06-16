@@ -106,7 +106,10 @@ SLASH_TEMP1="/temp"
     print("This was Farenheit")
     result = (number-32)*(5/9)
   end
-
+  if string.lower(CorF) == "c" then
+    print("This was Celcius")
+    result = (number*1.8)+32
+  end
   print("TEMP:" .. result .. "")
 end
   
