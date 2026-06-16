@@ -95,6 +95,21 @@ SlashCmdList["SCORE"] = function(msg)
     table.insert(UISpecialFrames, "PVEFrame")
 end
 
+SLASH_TEMP1="/temp"
+  SlashCmdList["TEMP"] = function(msg)
+  local temp = msg
+  CorF = string.sub(temp, -1)
+  local number = temp:sub(1, -2)
+  print(CorF)
+  print(number)
+  if string.lower(CorF) == "f" then
+    print("This was Farenheit")
+    result = (number-32)*(5/9)
+  end
+
+  print("TEMP:" .. result .. "")
+end
+  
 SLASH_POOCOMM1 = "/poocomm"
 SlashCmdList["POOCOMM"] = function(msg)
     print("Commands:\n")
